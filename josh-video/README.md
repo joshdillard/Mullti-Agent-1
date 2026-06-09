@@ -9,7 +9,10 @@
   </a>
 </p>
 
-Welcome to your Remotion project!
+This project contains the **"i am josh dillard"** title animation
+(`src/Composition.tsx`): the words spring in one by one over a blue→purple
+gradient, with the name emphasized in bold white. It renders at
+1920×1080, 30fps, 120 frames (4s) — configured in `src/Root.tsx`.
 
 ## Commands
 
@@ -25,11 +28,32 @@ npm i
 npm run dev
 ```
 
-**Render video**
+**Render video** (writes `out/josh.mp4`)
 
 ```console
-npx remotion render
+npm run render
 ```
+
+### Rendering in a sandboxed / cloud environment
+
+Some environments (e.g. Claude Code on the web) block Remotion from
+downloading its bundled Chromium. If a browser is already present, point
+Remotion at it with the `REMOTION_BROWSER_EXECUTABLE` env var — the config
+in `remotion.config.ts` picks it up automatically and switches to the
+required new-headless mode:
+
+```console
+REMOTION_BROWSER_EXECUTABLE=/path/to/chrome npm run render
+```
+
+For example, with a pre-installed Playwright Chromium:
+
+```console
+REMOTION_BROWSER_EXECUTABLE=$(ls -d /opt/pw-browsers/chromium-*/chrome-linux/chrome | head -1) npm run render
+```
+
+On a normal machine this var is unset and Remotion downloads/uses its own
+browser as usual.
 
 **Upgrade Remotion**
 

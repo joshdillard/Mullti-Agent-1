@@ -24,6 +24,7 @@
   "scripts": {
     "dev": "remotion studio",
     "build": "remotion bundle",
+    "render": "remotion render MyComp out/josh.mp4",
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc"
   },
