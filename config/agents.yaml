@@ -84,3 +84,8 @@ agents:
     enabled: true
     schedule: "0 8 * * 1"          # Mondays 8:00am
     deliver_to: [telegram]
+
+  reply_to_dms:
+    enabled: true
+    schedule: "0 */2 * * *"        # every 2 hours, drafts replies to unread DMs
+    deliver_to: [telegram]

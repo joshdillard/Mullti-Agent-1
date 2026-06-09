@@ -10,6 +10,7 @@ from typing import Any
 
 from .ayrshare import Ayrshare
 from .base import Integration
+from .zernio import Zernio
 
 
 class LinkedIn(Integration):
@@ -18,15 +19,20 @@ class LinkedIn(Integration):
 
     def __init__(self) -> None:
         super().__init__()
+        self.zernio = Zernio()
         self.ayrshare = Ayrshare()
-        self.configured = self.configured or self.ayrshare.configured
+        self.configured = (
+            self.configured or self.zernio.configured or self.ayrshare.configured
+        )
 
     def draft_post(self, text: str) -> dict[str, Any]:
         """Stage a LinkedIn post.
 
-        Via Ayrshare this is a dry-run by default (composed, not published) so
-        nothing posts to your profile without you setting AYRSHARE_AUTO_POST.
+        Prefers Zernio, then Ayrshare. Both default to dry-run (composed, not
+        published) until you opt in, so nothing posts without your say-so.
         """
+        if self.zernio.configured:
+            return self.zernio.post(text, ["linkedin"])
         if self.ayrshare.configured:
             return self.ayrshare.post(text, ["linkedin"])
         self.demo("draft_post")

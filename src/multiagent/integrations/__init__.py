@@ -12,6 +12,7 @@ from .stripe_client import Stripe
 from .telegram import Telegram
 from .tiktok import TikTok
 from .websearch import Web
+from .zernio import Zernio
 
 
 class Integrations:
@@ -65,9 +66,14 @@ class Integrations:
     def phyllo(self) -> Phyllo:
         return self._get("phyllo", Phyllo)
 
+    @property
+    def zernio(self) -> Zernio:
+        return self._get("zernio", Zernio)
+
     def status(self) -> dict[str, bool]:
         """Which integrations are configured (live) vs demo."""
         return {
+            "zernio": self.zernio.configured,
             "ayrshare": self.ayrshare.configured,
             "phyllo": self.phyllo.configured,
             "tiktok": self.tiktok.configured,
@@ -83,6 +89,7 @@ class Integrations:
 
 __all__ = [
     "Integrations",
+    "Zernio",
     "Ayrshare",
     "Phyllo",
     "Docs",

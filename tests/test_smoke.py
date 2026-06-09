@@ -30,6 +30,7 @@ EXPECTED_AGENTS = {
     "tax_season_prep",
     "track_brand_mentions",
     "weekly_revenue_summary",
+    "reply_to_dms",
 }
 
 
@@ -141,6 +142,42 @@ def test_phyllo_preferred_for_audience(monkeypatch):
 
     aud = TikTok().audience()
     assert aud.get("_source") == "phyllo"
+
+
+def test_zernio_present_and_dry_run(monkeypatch):
+    from multiagent.integrations.zernio import Zernio
+
+    assert "zernio" in Integrations().status()
+
+    # No key → demo inbox returns sample conversations (no network call).
+    monkeypatch.delenv("ZERNIO_API_KEY", raising=False)
+    assert Zernio().unread_conversations()
+
+    # With a key but auto-flags off, posting and DM-sending must be dry-runs.
+    monkeypatch.setenv("ZERNIO_API_KEY", "sk_test")
+    monkeypatch.delenv("ZERNIO_AUTO_POST", raising=False)
+    monkeypatch.delenv("ZERNIO_AUTO_SEND", raising=False)
+    z = Zernio()
+    assert z.post("hi", ["linkedin"])["status"] == "dry_run"
+    assert z.send_message("c1", "hello")["status"] == "dry_run"
+
+
+def test_reply_to_dms_runs_in_demo(monkeypatch):
+    from multiagent import llm
+
+    monkeypatch.setattr(
+        llm.LLM, "complete_json", lambda self, p, s, **k: {
+            "replies": [
+                {"id": "c1", "participant": "@jenny.makes", "platform": "instagram",
+                 "intent": "asking rates", "hotness": "lead", "draft": "Hi! Yes — DMing rates now."}
+            ]
+        }
+    )
+    from multiagent.core import run_agent
+    settings = Settings.load()
+    res = run_agent("reply_to_dms", settings)
+    assert res.ok
+    assert "jenny" in res.body.lower()
 
 
 def test_dashboard_auth_gate(monkeypatch):

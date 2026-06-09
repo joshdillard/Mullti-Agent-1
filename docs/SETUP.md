@@ -76,7 +76,38 @@ A content idea should arrive in your Telegram chat.
 
 ---
 
-## Step 3 — Ayrshare (TikTok + LinkedIn) · one key for both
+## Step 3 — Zernio (posting + DMs + cold outreach) · recommended
+
+Zernio is the primary social tool: it posts to 15 platforms **and** reads/replies
+to DMs — it powers the `reply_to_dms` agent and your social posting + outreach.
+
+1. Sign up at **https://zernio.com** (your first 2 connected accounts are free).
+2. In the Zernio dashboard, **connect your social accounts** (TikTok, LinkedIn,
+   Instagram, etc.) and authorize them.
+3. Copy your **API key** (it starts with `sk_`) and add it to `.env`:
+   ```
+   ZERNIO_API_KEY=sk_...your-key...
+   ```
+4. **Safety — leave these OFF until you've reviewed what it produces.** By
+   default Zernio *drafts* posts and DM replies but does **not** send them:
+   ```
+   ZERNIO_AUTO_POST=false      # set true to actually publish posts
+   ZERNIO_AUTO_SEND=false      # set true to actually send DM replies / outreach
+   ```
+5. Test:
+   ```bash
+   python run.py status            # zernio should read "LIVE"
+   python run.py run reply_to_dms  # drafts replies to your unread DMs
+   ```
+
+What this unlocks: real social posting (`daily_content_idea`'s LinkedIn post),
+the `reply_to_dms` agent (auto-drafts replies to DMs across platforms), and DM
+cold outreach. Flip the two safety flags to `true` only when you trust the drafts.
+
+> Prefer Ayrshare instead, or want it as a backup? It's still supported —
+> see the optional step below.
+
+## Step 3b — Ayrshare (alternative to Zernio) · optional
 
 Ayrshare is the shortcut around TikTok/LinkedIn app review. One key gives the
 agents both **posting** and **analytics** on both platforms.

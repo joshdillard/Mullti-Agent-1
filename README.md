@@ -183,19 +183,21 @@ The two hardest integrations don't hand out simple API keys — they require
 developer-app review and OAuth. The fastest path is a **third-party aggregator**
 that has already done that work. After comparing the options:
 
-| Provider | Posts | Analytics/Audience | TikTok | LinkedIn | Best for |
-|---|---|---|---|---|---|
-| **[Ayrshare](https://www.ayrshare.com)** ⭐ | ✅ | ✅ | ✅ | ✅ | One key for posting **and** analytics — built in here |
-| [Phyllo](https://www.getphyllo.com) | ❌ | ✅✅ | ✅ | ✅ | Deep audience demographics (read-only) |
-| [Upload-Post](https://www.upload-post.com) | ✅ | limited | ✅ | ✅ | Cheapest; free tier; ships an MCP server |
-| Official APIs | ✅ | ✅ | app review | app review | Free but slow to approve |
-| [`davidteather/TikTok-Api`](https://github.com/davidteather/TikTok-Api) (6.4k★) | ❌ | scrape trends | ✅ | — | Trend data (unofficial; ToS risk) |
+| Provider | Posts | DMs/Inbox | Analytics | Best for |
+|---|---|---|---|---|
+| **[Zernio](https://zernio.com)** ⭐ | ✅ | ✅ | ✅ | Posting **+ read/reply DMs + cold outreach** across 15 platforms — powers `reply_to_dms`. First 2 accounts free. |
+| [Ayrshare](https://www.ayrshare.com) | ✅ | ❌ | ✅ | One key for posting and analytics |
+| [Phyllo](https://www.getphyllo.com) | ❌ | ❌ | ✅✅ | Deep audience demographics (read-only) |
+| [Upload-Post](https://www.upload-post.com) | ✅ | limited | limited | Cheapest; free tier; ships an MCP server |
+| Official APIs | ✅ | varies | ✅ | Free but slow app review |
 
-**Ayrshare is wired in.** Set `AYRSHARE_API_KEY` in `.env`, connect your TikTok +
-LinkedIn accounts in their dashboard, and the TikTok/LinkedIn adapters route
-through it automatically — no code changes. Posting stays a **dry-run** (composed
-but not published) until you set `AYRSHARE_AUTO_POST=true`, so nothing goes out
-to your audience by accident. Trend discovery (`spot_viral_opportunities`) and
+**Zernio is wired in** as the primary social provider. Set `ZERNIO_API_KEY` in
+`.env`, connect your accounts at zernio.com, and posting + the `reply_to_dms`
+agent go live. **Both outward actions are off by default** — posts compose as
+dry-runs (`ZERNIO_AUTO_POST=true` to publish) and DM replies are drafted, not
+sent (`ZERNIO_AUTO_SEND=true` to auto-send) — so nothing goes out by accident.
+Ayrshare/Phyllo remain available as alternatives. Trend discovery
+(`spot_viral_opportunities`) and
 brand/competitor research run on Claude's built-in web search, so they need no
 social key at all.
 

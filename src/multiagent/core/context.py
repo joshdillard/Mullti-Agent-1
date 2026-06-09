@@ -61,3 +61,7 @@ class Context:
     @property
     def web(self):
         return self.integrations.web
+
+    @property
+    def zernio(self):
+        return self.integrations.zernio
