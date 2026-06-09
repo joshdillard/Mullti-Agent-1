@@ -50,9 +50,32 @@ python run.py status          # shows which integrations are LIVE vs demo
 python run.py run weekly_revenue_summary
 python run.py run research_topic_series --topic "AI b-roll workflows"
 
-# 4. Add your keys
+# 4. Open the monitoring dashboard
+python run.py dashboard        # http://127.0.0.1:8765
+
+# 5. Add your keys
 cp .env.example .env          # then fill in ANTHROPIC_API_KEY at minimum
 ```
+
+---
+
+## Monitoring dashboard
+
+```bash
+python run.py dashboard        # → http://127.0.0.1:8765
+```
+
+A single-page board to check on everything daily:
+
+- **Agent grid** — every agent with its schedule, next run, last-run status
+  (green/red/spinner), delivery targets, and a preview of its latest output.
+- **Run now** — trigger any agent on the spot (runs in the background); click
+  **View output** to read the full result.
+- **Recent activity** feed — the last 40 runs across all agents.
+- **Integration pills** — at a glance, which services are `live` vs `demo`.
+- Auto-refreshes every 12s.
+
+Run it alongside `python run.py serve` (the scheduler) on the same box.
 
 The only key needed for the reasoning to be *real* (not stubbed) is
 `ANTHROPIC_API_KEY`. Every other integration is optional and activates the
@@ -98,11 +121,15 @@ src/multiagent/
 │   ├── agent.py            # Agent base class + AgentResult
 │   ├── context.py          # per-run context (llm, integrations, state, notify)
 │   ├── registry.py         # @register + auto-discovery
+│   ├── runner.py           # shared run path (scheduler/CLI/dashboard)
 │   ├── scheduler.py        # APScheduler cron runner
+│   ├── history.py          # run-history store (what the dashboard reads)
 │   └── state.py            # per-agent JSON memory (dedupe ideas, leads, etc.)
 ├── integrations/           # one adapter per service, each with demo fallback
+│   ├── ayrshare.py         # unified TikTok + LinkedIn provider
 │   ├── tiktok.py  linkedin.py  gmail.py  gsheets.py
 │   ├── gdocs.py   stripe_client.py  telegram.py  websearch.py
+├── dashboard/              # Flask monitoring UI (app.py + templates/)
 └── agents/                 # the 14 agents, one file each
 ```
 
@@ -122,20 +149,44 @@ src/multiagent/
 
 ---
 
+## Connecting TikTok & LinkedIn
+
+The two hardest integrations don't hand out simple API keys — they require
+developer-app review and OAuth. The fastest path is a **third-party aggregator**
+that has already done that work. After comparing the options:
+
+| Provider | Posts | Analytics/Audience | TikTok | LinkedIn | Best for |
+|---|---|---|---|---|---|
+| **[Ayrshare](https://www.ayrshare.com)** ⭐ | ✅ | ✅ | ✅ | ✅ | One key for posting **and** analytics — built in here |
+| [Phyllo](https://www.getphyllo.com) | ❌ | ✅✅ | ✅ | ✅ | Deep audience demographics (read-only) |
+| [Upload-Post](https://www.upload-post.com) | ✅ | limited | ✅ | ✅ | Cheapest; free tier; ships an MCP server |
+| Official APIs | ✅ | ✅ | app review | app review | Free but slow to approve |
+| [`davidteather/TikTok-Api`](https://github.com/davidteather/TikTok-Api) (6.4k★) | ❌ | scrape trends | ✅ | — | Trend data (unofficial; ToS risk) |
+
+**Ayrshare is wired in.** Set `AYRSHARE_API_KEY` in `.env`, connect your TikTok +
+LinkedIn accounts in their dashboard, and the TikTok/LinkedIn adapters route
+through it automatically — no code changes. Posting stays a **dry-run** (composed
+but not published) until you set `AYRSHARE_AUTO_POST=true`, so nothing goes out
+to your audience by accident. Trend discovery (`spot_viral_opportunities`) and
+brand/competitor research run on Claude's built-in web search, so they need no
+social key at all.
+
+> Want richer follower demographics for `research_audience` /
+> `weekly_performance_review`? Add Phyllo as a second provider — the adapter
+> seam is the same as Ayrshare's.
+
 ## Taking an integration live
 
-Each adapter has a clearly marked `raise NotImplementedError(...)` at the live
-call site with the exact API to wire. Add the key to `.env`, implement that one
-method, and the agent flips from demo to live automatically. Suggested order:
+Add the key to `.env` and the agent flips from demo to live automatically.
+Suggested order:
 
 1. **`ANTHROPIC_API_KEY`** — makes all reasoning real.
-2. **Telegram** — `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` (already fully
-   implemented — your phone alerts work immediately).
-3. **Stripe** — `STRIPE_API_KEY` (revenue summary + tax prep are live-ready).
-4. **Google** (Gmail/Sheets/Docs) — drop OAuth `client_secret.json` at
+2. **Telegram** — `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` (fully implemented —
+   phone alerts work immediately).
+3. **Ayrshare** — `AYRSHARE_API_KEY` → TikTok + LinkedIn posting & analytics.
+4. **Stripe** — `STRIPE_API_KEY` (revenue summary + tax prep are live-ready).
+5. **Google** (Gmail/Sheets/Docs) — drop OAuth `client_secret.json` at
    `GOOGLE_CREDENTIALS_FILE`; `pip install google-api-python-client google-auth-oauthlib`.
-5. **TikTok / LinkedIn** — require platform app review; structure + sample data
-   are in place so downstream agents already produce real output.
 
 ---
 

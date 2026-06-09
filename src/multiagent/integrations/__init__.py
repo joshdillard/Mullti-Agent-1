@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .ayrshare import Ayrshare
 from .gdocs import Docs
 from .gmail import Gmail
 from .gsheets import Sheets
@@ -55,9 +56,14 @@ class Integrations:
     def web(self) -> Web:
         return self._get("web", Web)
 
+    @property
+    def ayrshare(self) -> Ayrshare:
+        return self._get("ayrshare", Ayrshare)
+
     def status(self) -> dict[str, bool]:
         """Which integrations are configured (live) vs demo."""
         return {
+            "ayrshare": self.ayrshare.configured,
             "tiktok": self.tiktok.configured,
             "linkedin": self.linkedin.configured,
             "gmail": self.gmail.configured,
@@ -71,6 +77,7 @@ class Integrations:
 
 __all__ = [
     "Integrations",
+    "Ayrshare",
     "Docs",
     "Gmail",
     "Sheets",

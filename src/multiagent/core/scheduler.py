@@ -14,17 +14,15 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from .agent import Agent
-from .context import Context
 from .registry import load_all
+from .runner import run_agent
 from ..settings import Settings
 
 log = logging.getLogger("multiagent.scheduler")
 
 
 def _run_agent(agent_cls: type[Agent], settings: Settings) -> None:
-    ctx = Context(agent_cls.name, settings)
-    result = agent_cls().execute(ctx)
-    ctx.notify.send(result)
+    run_agent(agent_cls.name, settings)
 
 
 def build_scheduler(settings: Settings) -> BlockingScheduler:

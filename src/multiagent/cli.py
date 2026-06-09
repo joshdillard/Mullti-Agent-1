@@ -17,7 +17,7 @@ import argparse
 import logging
 import sys
 
-from .core import Context, load_all
+from .core import load_all, run_agent
 from .settings import Settings
 
 
@@ -56,14 +56,18 @@ def cmd_status(settings: Settings) -> int:
 
 
 def cmd_run(settings: Settings, name: str, params: dict) -> int:
-    registry = load_all()
-    if name not in registry:
+    if name not in load_all():
         print(f"unknown agent '{name}'. Try `list`.", file=sys.stderr)
         return 2
-    ctx = Context(name, settings, params=params)
-    result = registry[name]().execute(ctx)
-    ctx.notify.send(result)
+    result = run_agent(name, settings, params=params)
     return 0 if result.ok else 1
+
+
+def cmd_dashboard(settings: Settings, host: str, port: int) -> int:
+    from .dashboard.app import run_dashboard
+
+    run_dashboard(settings, host=host, port=port)
+    return 0
 
 
 def cmd_serve(settings: Settings) -> int:
@@ -106,6 +110,10 @@ def main(argv: list[str] | None = None) -> int:
     p_run.add_argument("--query")
     p_run.add_argument("--set", action="append", metavar="key=value")
 
+    p_dash = sub.add_parser("dashboard", help="launch the monitoring dashboard")
+    p_dash.add_argument("--host", default="127.0.0.1")
+    p_dash.add_argument("--port", type=int, default=8765)
+
     args = parser.parse_args(argv)
     _setup_logging(args.verbose)
     settings = Settings.load()
@@ -118,6 +126,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_serve(settings)
     if args.command == "run":
         return cmd_run(settings, args.agent, _parse_params(args))
+    if args.command == "dashboard":
+        return cmd_dashboard(settings, args.host, args.port)
     return 1
 
 

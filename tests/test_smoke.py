@@ -71,3 +71,42 @@ def test_config_loads():
     settings = Settings.load()
     assert settings.agents
     assert "daily_content_idea" in settings.agents
+
+
+def test_ayrshare_present_and_dry_run(monkeypatch):
+    from multiagent.integrations.ayrshare import Ayrshare
+
+    ix = Integrations()
+    assert "ayrshare" in ix.status()
+
+    # With a key but auto-post off, posting must be a dry run (never publishes).
+    monkeypatch.setenv("AYRSHARE_API_KEY", "test-key")
+    monkeypatch.delenv("AYRSHARE_AUTO_POST", raising=False)
+    out = Ayrshare().post("hello", ["linkedin"])
+    assert out["status"] == "dry_run"
+
+
+def test_runner_records_history(tmp_path, monkeypatch):
+    # Stub the LLM so no API key is needed.
+    from multiagent import llm
+
+    monkeypatch.setattr(llm.LLM, "complete", lambda self, p, **k: "stub output")
+    monkeypatch.setattr(
+        llm.LLM, "complete_json", lambda self, p, s, **k: {"leads": []}
+    )
+
+    from multiagent.core import run_agent, History
+    from multiagent.dashboard.app import build_state
+
+    settings = Settings.load()
+    settings.state_dir = tmp_path
+    result = run_agent("weekly_revenue_summary", settings)
+    assert result.ok
+
+    hist = History(tmp_path / "history.json").latest_per_agent()
+    assert "weekly_revenue_summary" in hist
+
+    state = build_state(settings)
+    assert state["agents"]
+    assert any(a["name"] == "weekly_revenue_summary" for a in state["agents"])
+    assert "ayrshare" in state["integrations"]

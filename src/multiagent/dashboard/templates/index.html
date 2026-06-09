@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{{ business }} · Agent Dashboard</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#171b22; --panel2:#1d222b; --line:#272d38;
+    --text:#e6e9ef; --muted:#8b94a3; --accent:#6ea8fe; --green:#3fb950;
+    --red:#f85149; --amber:#d29922; --chip:#222834;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--accent);text-decoration:none}
+  header{display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+    padding:18px 24px;border-bottom:1px solid var(--line);background:var(--panel)}
+  header h1{font-size:17px;margin:0;font-weight:650}
+  header .sub{color:var(--muted);font-size:12px}
+  .pills{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+  .pill{font-size:11px;padding:3px 9px;border-radius:999px;background:var(--chip);
+    border:1px solid var(--line);color:var(--muted)}
+  .pill.live{color:var(--green);border-color:#1f3d28}
+  .wrap{max-width:1280px;margin:0 auto;padding:22px 24px}
+  .layout{display:grid;grid-template-columns:1fr 340px;gap:22px}
+  @media(max-width:960px){.layout{grid-template-columns:1fr}}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);
+    margin:0 0 12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:16px;display:flex;flex-direction:column;gap:10px;min-height:150px}
+  .card.off{opacity:.55}
+  .card .top{display:flex;align-items:flex-start;gap:10px}
+  .dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none;background:#3a4150}
+  .dot.ok{background:var(--green)} .dot.err{background:var(--red)}
+  .dot.run{background:var(--accent);animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .title{font-weight:600}
+  .desc{color:var(--muted);font-size:12px}
+  .meta{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--muted)}
+  .meta b{color:var(--text);font-weight:550}
+  .chips{display:flex;gap:5px;flex-wrap:wrap}
+  .chip{font-size:10px;padding:2px 7px;border-radius:6px;background:var(--chip);color:var(--muted)}
+  .preview{font-size:12px;color:#c2c9d6;background:var(--panel2);border:1px solid var(--line);
+    border-radius:8px;padding:9px;max-height:84px;overflow:hidden;white-space:pre-wrap;
+    position:relative}
+  .preview.empty{color:var(--muted);font-style:italic}
+  .row{display:flex;gap:8px;align-items:center;margin-top:auto}
+  button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--chip);
+    color:var(--text);border-radius:8px;padding:6px 12px}
+  button:hover{border-color:var(--accent)}
+  button:disabled{opacity:.5;cursor:default}
+  button.run{background:var(--accent);color:#06121f;border-color:transparent;font-weight:600}
+  .link{font-size:12px;color:var(--accent);cursor:pointer}
+  aside .feed{display:flex;flex-direction:column;gap:8px}
+  .ev{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+  .ev .h{display:flex;gap:8px;align-items:center;font-size:12px}
+  .ev .t{color:var(--muted);font-size:11px;margin-left:auto}
+  .ev .ti{font-size:12px;color:#c2c9d6;margin-top:3px}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;
+    align-items:center;justify-content:center;padding:24px;z-index:50}
+  .modal.show{display:flex}
+  .modal .box{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    max-width:760px;width:100%;max-height:80vh;overflow:auto;padding:22px}
+  .modal pre{white-space:pre-wrap;font:13px/1.6 ui-monospace,Menlo,Consolas,monospace;color:#d7dce4}
+  .x{float:right;cursor:pointer;color:var(--muted);font-size:20px;line-height:1}
+  .foot{color:var(--muted);font-size:11px;margin-top:16px;text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>🎬 {{ business }}</h1>
+    <div class="sub" id="sub">loading…</div>
+  </div>
+  <div class="pills" id="pills"></div>
+</header>
+
+<div class="wrap">
+  <div class="layout">
+    <main>
+      <h2>Agents</h2>
+      <div class="grid" id="grid"></div>
+    </main>
+    <aside>
+      <h2>Recent activity</h2>
+      <div class="feed" id="feed"></div>
+    </aside>
+  </div>
+  <div class="foot" id="foot"></div>
+</div>
+
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="box"><span class="x" onclick="closeModal()">×</span>
+    <h3 id="m-title"></h3><pre id="m-body"></pre></div>
+</div>
+
+<script>
+let DATA = null;
+
+function rel(iso){
+  if(!iso) return "—";
+  const d = new Date(iso), s = (Date.now()-d.getTime())/1000;
+  if(s<60) return Math.round(s)+"s ago";
+  if(s<3600) return Math.round(s/60)+"m ago";
+  if(s<86400) return Math.round(s/3600)+"h ago";
+  return Math.round(s/86400)+"d ago";
+}
+function when(iso){ return iso ? new Date(iso).toLocaleString([], {weekday:'short',hour:'2-digit',minute:'2-digit'}) : "—"; }
+function esc(s){ return (s||"").replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+function dotClass(a){
+  if(a.running) return "run";
+  if(!a.last) return "";
+  return a.last.ok ? "ok" : "err";
+}
+
+function render(){
+  const d = DATA;
+  document.getElementById("sub").textContent =
+    `${d.business.niche} · model ${d.model} · ${d.agents.length} agents`;
+
+  const pills = Object.entries(d.integrations).map(([k,v])=>
+    `<span class="pill ${v?'live':''}">${k}: ${v?'live':'demo'}</span>`).join("");
+  document.getElementById("pills").innerHTML = pills;
+
+  document.getElementById("grid").innerHTML = d.agents.map(a=>{
+    const last = a.last;
+    const preview = last ? esc(last.preview) : "No runs yet.";
+    const chips = (a.deliver_to||[]).map(x=>`<span class="chip">${x}</span>`).join("");
+    return `<div class="card ${a.enabled?'':'off'}">
+      <div class="top">
+        <span class="dot ${dotClass(a)}"></span>
+        <div>
+          <div class="title">${esc(a.description)}</div>
+          <div class="desc">${a.name}</div>
+        </div>
+      </div>
+      <div class="meta">
+        <span>⏱ <b>${a.schedule_human}</b></span>
+        <span>next: <b>${when(a.next_run)}</b></span>
+        <span>last: <b>${last?rel(last.finished_at):'—'}</b></span>
+      </div>
+      <div class="chips">${chips}</div>
+      <div class="preview ${last?'':'empty'}">${preview}</div>
+      <div class="row">
+        <button class="run" ${a.running?'disabled':''} onclick="runAgent('${a.name}')">
+          ${a.running?'Running…':'Run now'}</button>
+        ${last?`<span class="link" onclick='viewOutput(${JSON.stringify(a.name)})'>View output</span>`:''}
+      </div>
+    </div>`;
+  }).join("");
+
+  document.getElementById("feed").innerHTML = d.activity.length ? d.activity.map(e=>`
+    <div class="ev">
+      <div class="h">
+        <span class="dot ${e.ok?'ok':'err'}"></span>
+        <b>${esc(e.agent||'?')}</b>
+        <span class="t">${rel(e.finished_at)}</span>
+      </div>
+      <div class="ti">${esc(e.title||'')}</div>
+    </div>`).join("") : '<div class="ev">No activity yet — hit “Run now” on any agent.</div>';
+
+  document.getElementById("foot").textContent = "updated " + when(d.now) + " · auto-refresh 12s";
+}
+
+async function load(){
+  try{
+    const r = await fetch("/api/state");
+    DATA = await r.json();
+    render();
+  }catch(e){ console.error(e); }
+}
+async function runAgent(name){
+  await fetch("/api/run/"+name, {method:"POST"});
+  setTimeout(load, 400);
+}
+function viewOutput(name){
+  const a = DATA.agents.find(x=>x.name===name);
+  if(!a||!a.last) return;
+  document.getElementById("m-title").textContent = a.last.title || a.description;
+  document.getElementById("m-body").textContent = a.last.body || a.last.preview || "(empty)";
+  document.getElementById("modal").classList.add("show");
+}
+function closeModal(){ document.getElementById("modal").classList.remove("show"); }
+
+load();
+setInterval(load, 12000);
+</script>
+</body>
+</html>

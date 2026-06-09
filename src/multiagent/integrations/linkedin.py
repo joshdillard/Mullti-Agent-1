@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .ayrshare import Ayrshare
 from .base import Integration
 
 
@@ -15,13 +16,21 @@ class LinkedIn(Integration):
     name = "linkedin"
     env_vars = ("LINKEDIN_ACCESS_TOKEN",)
 
+    def __init__(self) -> None:
+        super().__init__()
+        self.ayrshare = Ayrshare()
+        self.configured = self.configured or self.ayrshare.configured
+
     def draft_post(self, text: str) -> dict[str, Any]:
-        """Stage a post as a draft (never auto-published)."""
-        if not self.configured:
-            self.demo("draft_post")
-            return {"status": "demo", "text": text}
-        # Live: POST /rest/posts with lifecycleState=DRAFT.
-        raise NotImplementedError("Wire LinkedIn Posts API (draft) here.")
+        """Stage a LinkedIn post.
+
+        Via Ayrshare this is a dry-run by default (composed, not published) so
+        nothing posts to your profile without you setting AYRSHARE_AUTO_POST.
+        """
+        if self.ayrshare.configured:
+            return self.ayrshare.post(text, ["linkedin"])
+        self.demo("draft_post")
+        return {"status": "demo", "text": text}
 
     def search_companies(self, profile: str, limit: int = 10) -> list[dict[str, Any]]:
         """Find companies matching an ideal-client profile."""

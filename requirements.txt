@@ -5,8 +5,12 @@ PyYAML>=6.0.2
 python-dotenv>=1.0.1
 requests>=2.32.3
 
+# Dashboard
+Flask>=3.0.0
+
 # Optional integrations (install as you wire each one live).
 # The system runs without these — adapters fall back to demo mode.
+# social-post-api>=2.0.0          # Ayrshare SDK (TikTok + LinkedIn, one key)
 # stripe>=11.0.0
 # google-api-python-client>=2.150.0
 # google-auth>=2.35.0

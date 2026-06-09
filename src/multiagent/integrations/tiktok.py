@@ -10,6 +10,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from typing import Any
 
+from .ayrshare import Ayrshare
 from .base import Integration
 
 
@@ -17,32 +18,76 @@ class TikTok(Integration):
     name = "tiktok"
     env_vars = ("TIKTOK_ACCESS_TOKEN",)
 
+    def __init__(self) -> None:
+        super().__init__()
+        # Ayrshare is the recommended provider — it covers TikTok analytics
+        # without the official app-review gauntlet. We're "live" if either the
+        # direct TikTok token OR an Ayrshare key is present.
+        self.ayrshare = Ayrshare()
+        self.configured = self.configured or self.ayrshare.configured
+
     def trending(self, keywords: list[str] | None = None, limit: int = 10) -> list[dict[str, Any]]:
-        """Return trending sounds/hashtags/formats relevant to the niche."""
-        if not self.configured:
-            self.demo("trending")
-            return _SAMPLE_TRENDS[:limit]
-        # Live: query the TikTok Research API `/v2/research/video/query/`
-        # filtered to the niche keywords, aggregate by hashtag/sound.
-        raise NotImplementedError(
-            "Wire TikTok Research API here using TIKTOK_ACCESS_TOKEN."
-        )
+        """Return trending sounds/hashtags/formats relevant to the niche.
+
+        Note: neither Ayrshare nor the official APIs expose a trending feed.
+        Trend discovery is handled by the agents via Claude's web_search
+        (see spot_viral_opportunities). This returns curated sample trends.
+        """
+        self.demo("trending")
+        return _SAMPLE_TRENDS[:limit]
 
     def my_recent_posts(self, days: int = 7) -> list[dict[str, Any]]:
         """Return the user's recent posts with engagement metrics."""
-        if not self.configured:
-            self.demo("my_recent_posts")
-            return _sample_posts(days)
-        # Live: GET /v2/video/list/ then /v2/video/query/ for metrics.
-        raise NotImplementedError("Wire TikTok Display API video.list here.")
+        if self.ayrshare.configured:
+            posts = _from_ayrshare_history(self.ayrshare.history(platform="tiktok"))
+            if posts:
+                return posts
+        self.demo("my_recent_posts")
+        return _sample_posts(days)
 
     def audience(self) -> dict[str, Any]:
         """Return follower demographics + top-performing content themes."""
-        if not self.configured:
-            self.demo("audience")
-            return _SAMPLE_AUDIENCE
-        # Live: GET /v2/user/info/ + creator insights.
-        raise NotImplementedError("Wire TikTok creator insights here.")
+        if self.ayrshare.configured:
+            data = self.ayrshare.social_analytics(["tiktok"])
+            mapped = _from_ayrshare_analytics(data)
+            if mapped:
+                return mapped
+        self.demo("audience")
+        return _SAMPLE_AUDIENCE
+
+
+def _from_ayrshare_history(history: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Best-effort map of Ayrshare /history records to our post shape."""
+    out = []
+    for h in history:
+        analytics = h.get("analytics", {}) or {}
+        out.append(
+            {
+                "posted": h.get("created") or h.get("scheduleDate") or "",
+                "caption": h.get("post", "")[:120],
+                "views": int(analytics.get("videoViews", analytics.get("views", 0)) or 0),
+                "likes": int(analytics.get("likeCount", analytics.get("likes", 0)) or 0),
+                "comments": int(analytics.get("commentCount", analytics.get("comments", 0)) or 0),
+                "shares": int(analytics.get("shareCount", analytics.get("shares", 0)) or 0),
+            }
+        )
+    return out
+
+
+def _from_ayrshare_analytics(data: dict[str, Any]) -> dict[str, Any]:
+    tt = (data or {}).get("tiktok", {})
+    analytics = tt.get("analytics", tt) if isinstance(tt, dict) else {}
+    if not analytics:
+        return {}
+    return {
+        "followers": analytics.get("followerCount", analytics.get("followers", 0)),
+        "growth_30d": analytics.get("followerCountChange", "n/a"),
+        "top_locations": analytics.get("topLocations", []),
+        "age_skew": analytics.get("ageRange", "n/a"),
+        "gender_skew": analytics.get("gender", "n/a"),
+        "active_hours": analytics.get("activeHours", "n/a"),
+        "top_themes": [],
+    }
 
 
 _SAMPLE_TRENDS = [
