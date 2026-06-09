@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import Any
+from typing import Any, Callable
 
 from .settings import DEFAULT_MODEL
 
@@ -21,6 +21,9 @@ class LLM:
     def __init__(self, model: str | None = None) -> None:
         self.model = model or os.getenv("MULTIAGENT_MODEL", DEFAULT_MODEL)
         self._client = None  # lazy — lets the package import without a key
+        #: optional callback fired with each text delta as it streams; the
+        #: dashboard sets this to surface live output while an agent runs.
+        self.on_text: Callable[[str], None] | None = None
 
     @property
     def client(self):
@@ -29,6 +32,19 @@ class LLM:
 
             self._client = anthropic.Anthropic()
         return self._client
+
+    def _run(self, kwargs: dict[str, Any], on_text: Callable[[str], None] | None):
+        """Stream a request, firing the text callback per delta, and return
+        the assembled final message."""
+        cb = on_text or self.on_text
+        with self.client.messages.stream(**kwargs) as stream:
+            if cb is not None:
+                for delta in stream.text_stream:
+                    try:
+                        cb(delta)
+                    except Exception:  # noqa: BLE001 - a bad sink must not break a run
+                        pass
+            return stream.get_final_message()
 
     def complete(
         self,
@@ -39,6 +55,7 @@ class LLM:
         effort: str = "high",
         thinking: bool = True,
         web_search: bool = False,
+        on_text: Callable[[str], None] | None = None,
     ) -> str:
         """Return the model's text response.
 
@@ -58,8 +75,7 @@ class LLM:
         if web_search:
             kwargs["tools"] = [{"type": "web_search_20260209", "name": "web_search"}]
 
-        with self.client.messages.stream(**kwargs) as stream:
-            message = stream.get_final_message()
+        message = self._run(kwargs, on_text)
         return "".join(b.text for b in message.content if b.type == "text").strip()
 
     def complete_json(
@@ -70,6 +86,7 @@ class LLM:
         system: str | None = None,
         max_tokens: int = 8000,
         effort: str = "high",
+        on_text: Callable[[str], None] | None = None,
     ) -> Any:
         """Return a JSON value constrained to `schema` (a JSON Schema dict)."""
         kwargs: dict[str, Any] = {
@@ -85,7 +102,6 @@ class LLM:
         if system:
             kwargs["system"] = system
 
-        with self.client.messages.stream(**kwargs) as stream:
-            message = stream.get_final_message()
+        message = self._run(kwargs, on_text)
         text = next((b.text for b in message.content if b.type == "text"), "{}")
         return json.loads(text)

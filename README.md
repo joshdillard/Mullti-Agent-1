@@ -71,13 +71,34 @@ A single-page board to check on everything daily:
   order, with the next hour highlighted.
 - **Agent grid** — every agent with its schedule, next run, last-run status
   (green/red/spinner), delivery targets, and a preview of its latest output.
-- **Run now** — trigger any agent on the spot (runs in the background); click
-  **View output** to read the full result.
+- **Run now** — trigger any agent on the spot; its output **streams live** into
+  a modal as Claude generates it.
+- **Test delivery** — sends a real Telegram ping so you can confirm that channel
+  end-to-end in one click.
 - **Recent activity** feed — the last 40 runs across all agents.
 - **Integration pills** — at a glance, which services are `live` vs `demo`.
 - Auto-refreshes every 12s.
 
 Run it alongside `python run.py serve` (the scheduler) on the same box.
+
+### Securing it before you host
+
+The dashboard is open by default for local use. Before exposing it on a VPS,
+set a password — then it shows a login page and blocks all API calls until you
+sign in:
+
+```bash
+# in .env
+DASHBOARD_PASSWORD=your-strong-password
+DASHBOARD_SECRET=any-long-random-string   # keeps you logged in across restarts
+```
+
+```bash
+python run.py dashboard --host 0.0.0.0 --port 8765
+```
+
+> Put it behind HTTPS (a reverse proxy like Caddy/Nginx, or a Cloudflare Tunnel)
+> so the password isn't sent in clear text.
 
 The only key needed for the reasoning to be *real* (not stubbed) is
 `ANTHROPIC_API_KEY`. Every other integration is optional and activates the

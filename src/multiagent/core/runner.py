@@ -12,13 +12,26 @@ from .registry import load_all
 from ..settings import Settings
 
 
-def run_agent(name: str, settings: Settings, params: dict | None = None, *, deliver: bool = True):
-    """Run a single agent by name and return its AgentResult."""
+def run_agent(
+    name: str,
+    settings: Settings,
+    params: dict | None = None,
+    *,
+    deliver: bool = True,
+    live_sink=None,
+):
+    """Run a single agent by name and return its AgentResult.
+
+    `live_sink` is an optional callback that receives text deltas as the
+    agent's LLM calls stream — the dashboard uses it to show live output.
+    """
     registry = load_all()
     if name not in registry:
         raise KeyError(f"unknown agent '{name}'")
 
     ctx = Context(name, settings, params=params)
+    if live_sink is not None:
+        ctx.llm.on_text = live_sink
     started = now_iso()
     result = registry[name]().execute(ctx)
     # Tag the result so history knows which agent produced it.

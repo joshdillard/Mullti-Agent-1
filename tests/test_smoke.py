@@ -141,3 +141,74 @@ def test_phyllo_preferred_for_audience(monkeypatch):
 
     aud = TikTok().audience()
     assert aud.get("_source") == "phyllo"
+
+
+def test_dashboard_auth_gate(monkeypatch):
+    from multiagent.dashboard.app import create_app
+
+    monkeypatch.setenv("DASHBOARD_PASSWORD", "s3cret")
+    app = create_app(Settings.load())
+    client = app.test_client()
+
+    # Unauthed API call is blocked; HTML redirects to login.
+    assert client.get("/api/state").status_code == 401
+    assert client.get("/").status_code in (302, 401)
+
+    # Wrong then right password.
+    assert b"Incorrect" in client.post("/login", data={"password": "nope"}).data
+    client.post("/login", data={"password": "s3cret"})
+    assert client.get("/api/state").status_code == 200
+
+
+def test_dashboard_open_when_no_password(monkeypatch):
+    from multiagent.dashboard.app import create_app
+
+    monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
+    client = create_app(Settings.load()).test_client()
+    assert client.get("/api/state").status_code == 200
+
+
+def test_test_delivery_endpoint(monkeypatch):
+    from multiagent.dashboard.app import create_app
+
+    monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
+    # No Telegram creds → not configured, sent False, but endpoint still 200.
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+    monkeypatch.delenv("TELEGRAM_CHAT_ID", raising=False)
+    client = create_app(Settings.load()).test_client()
+    d = client.post("/api/test-delivery").get_json()
+    assert d["configured"] is False
+    assert d["sent"] is False
+
+
+def test_live_streaming_run(monkeypatch):
+    # The LLM sink should receive deltas and the run-output endpoint expose them.
+    from multiagent import llm
+
+    def fake_run(self, kwargs, on_text):
+        cb = on_text or self.on_text
+        if cb:
+            for chunk in ["Revenue ", "is ", "up."]:
+                cb(chunk)
+
+        class _Msg:
+            content = [type("B", (), {"type": "text", "text": "Revenue is up."})()]
+
+        return _Msg()
+
+    monkeypatch.setattr(llm.LLM, "_run", fake_run)
+
+    from multiagent.dashboard.app import create_app, _LIVE
+    import time
+
+    monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
+    client = create_app(Settings.load()).test_client()
+    client.post("/api/run/weekly_revenue_summary")
+    # Let the background thread finish.
+    for _ in range(50):
+        d = client.get("/api/run-output/weekly_revenue_summary").get_json()
+        if d.get("done"):
+            break
+        time.sleep(0.05)
+    assert "Revenue is up." in d["text"]
+    assert d["done"] is True
