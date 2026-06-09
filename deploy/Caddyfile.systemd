@@ -1,0 +1,9 @@
+# Caddyfile for the systemd (non-Docker) deployment.
+# Install Caddy on the host, drop this in /etc/caddy/Caddyfile (replace the
+# domain), and `systemctl reload caddy`. The dashboard binds to 127.0.0.1:8765;
+# Caddy fronts it with auto-HTTPS.
+
+agents.yourstudio.com {
+	encode gzip
+	reverse_proxy 127.0.0.1:8765
+}

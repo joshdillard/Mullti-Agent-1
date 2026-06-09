@@ -1,0 +1,56 @@
+# Production stack: scheduler + dashboard + auto-HTTPS reverse proxy.
+#
+#   cp .env.example .env        # fill in keys, set DASHBOARD_PASSWORD + DASHBOARD_DOMAIN
+#   docker compose up -d
+#
+# The scheduler runs agents on their cron schedules; the dashboard serves the
+# monitoring UI. They share ./state so the dashboard sees scheduled runs.
+# Caddy terminates TLS for DASHBOARD_DOMAIN and proxies to the dashboard.
+# For a quick local test without a domain, see the `dashboard.ports` note below.
+
+services:
+  scheduler:
+    build: .
+    command: python run.py serve
+    env_file: .env
+    volumes:
+      - ./state:/app/state
+      - ./credentials:/app/credentials
+    restart: unless-stopped
+
+  dashboard:
+    build: .
+    command: python run.py dashboard --host 0.0.0.0 --port 8765
+    env_file: .env
+    volumes:
+      - ./state:/app/state
+      - ./credentials:/app/credentials
+    expose:
+      - "8765"
+    # Local test without Caddy/domain: comment out `expose` above and use
+    #   ports: ["8765:8765"]   then open http://localhost:8765
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8765/healthz').status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    depends_on:
+      - dashboard
+    environment:
+      DASHBOARD_DOMAIN: ${DASHBOARD_DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

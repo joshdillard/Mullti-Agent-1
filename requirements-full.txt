@@ -1,0 +1,9 @@
+# Everything in requirements.txt plus the optional live-integration libraries.
+# Install with:  pip install -r requirements-full.txt
+-r requirements.txt
+
+social-post-api>=2.0.0            # Ayrshare SDK (TikTok + LinkedIn)
+stripe>=11.0.0
+google-api-python-client>=2.150.0
+google-auth>=2.35.0
+google-auth-oauthlib>=1.2.1

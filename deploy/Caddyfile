@@ -1,0 +1,11 @@
+# Caddy auto-provisions and renews a TLS certificate for your domain.
+# Set DASHBOARD_DOMAIN in .env (e.g. agents.yourstudio.com) with an A record
+# pointing at this server. Caddy reverse-proxies HTTPS to the dashboard.
+#
+# Used by docker-compose.yml (proxies to the `dashboard` service) and works
+# standalone for the systemd path (change `dashboard:8765` to `127.0.0.1:8765`).
+
+{$DASHBOARD_DOMAIN} {
+	encode gzip
+	reverse_proxy dashboard:8765
+}

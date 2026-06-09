@@ -119,6 +119,10 @@ python run.py serve
 Run it under `systemd`, `tmux`, `nohup`, or a cheap VPS. It fires each enabled,
 non-`manual` agent on its cron schedule from `config/agents.yaml`.
 
+> **Deploying for real?** [`docs/DEPLOY.md`](docs/DEPLOY.md) has a one-command
+> **Docker Compose** stack (scheduler + dashboard + auto-HTTPS via Caddy) and a
+> **systemd** path, both with the dashboard password-protected behind TLS.
+
 **Option B — OS crontab** (one line per agent). Each agent is also a one-shot
 command, so you can let the OS scheduler drive it:
 

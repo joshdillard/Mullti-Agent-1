@@ -183,7 +183,7 @@ def create_app(settings: Settings) -> Flask:
     def _guard():
         if not password:
             return None  # open mode (local dev)
-        if request.endpoint in ("login", "static"):
+        if request.endpoint in ("login", "static", "healthz"):
             return None
         if session.get("authed"):
             return None
@@ -207,6 +207,10 @@ def create_app(settings: Settings) -> Flask:
     def logout():
         session.clear()
         return redirect(url_for("login"))
+
+    @app.route("/healthz")
+    def healthz():
+        return jsonify({"ok": True})
 
     @app.route("/")
     def index():

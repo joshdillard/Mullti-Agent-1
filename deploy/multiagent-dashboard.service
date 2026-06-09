@@ -1,0 +1,23 @@
+# systemd unit for the monitoring dashboard.
+# Binds to localhost only — put Caddy (deploy/Caddyfile.systemd) in front for
+# public HTTPS. Install:
+#   sudo cp deploy/multiagent-dashboard.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now multiagent-dashboard
+
+[Unit]
+Description=Mullti-Agent-1 monitoring dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=multiagent
+WorkingDirectory=/opt/Mullti-Agent-1
+EnvironmentFile=/opt/Mullti-Agent-1/.env
+ExecStart=/opt/Mullti-Agent-1/.venv/bin/python run.py dashboard --host 127.0.0.1 --port 8765
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
