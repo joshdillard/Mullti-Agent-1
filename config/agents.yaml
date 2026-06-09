@@ -1,0 +1,86 @@
+# ============================================================================
+# Agent schedule & configuration.
+#
+# `schedule` is a standard 5-field cron expression (minute hour dom month dow)
+# evaluated in the timezone below. Agents with schedule: manual only run when
+# you invoke them explicitly (e.g. `python run.py run research_topic_series`).
+#
+# Toggle any agent off with `enabled: false`.
+# ============================================================================
+
+timezone: America/New_York
+
+agents:
+  daily_content_idea:
+    enabled: true
+    schedule: "0 8 * * *"          # every day at 8:00am
+    deliver_to: [telegram, linkedin_draft]
+
+  spot_viral_opportunities:
+    enabled: true
+    schedule: "0 7,12,17 * * *"    # 3x/day trend sweep
+    deliver_to: [telegram]
+    niche_keywords: ["video editing", "filmmaking", "ai video", "content creation"]
+
+  research_topic_series:
+    enabled: true
+    schedule: manual               # on-demand: pass --topic "..."
+    deliver_to: [gdoc]
+    parts: 5
+
+  weekly_performance_review:
+    enabled: true
+    schedule: "0 9 * * 1"          # Mondays 9:00am
+    deliver_to: [telegram, sheet]
+
+  newsletter_draft:
+    enabled: true
+    schedule: "0 15 * * 5"         # Fridays 3:00pm
+    deliver_to: [gdoc]
+
+  research_audience:
+    enabled: true
+    schedule: manual
+    deliver_to: [telegram]
+
+  clean_inbox:
+    enabled: true
+    schedule: "30 7 * * *"         # every morning 7:30am
+    deliver_to: [telegram]
+
+  find_next_role:
+    enabled: false                 # off by default (business owner, not job hunting)
+    schedule: manual
+    deliver_to: [telegram]
+
+  find_new_clients:
+    enabled: true
+    schedule: "0 2 * * *"          # nightly 2:00am — "while I sleep"
+    deliver_to: [telegram, gmail_draft]
+    targets_per_run: 10
+
+  track_competitors:
+    enabled: true
+    schedule: "0 8 * * 1"          # Mondays 8:00am
+    deliver_to: [telegram]
+    competitors: []                # add handles/domains, e.g. ["@rival", "rival.com"]
+
+  capture_leads:
+    enabled: true
+    schedule: "0 7 * * *"          # every morning 7:00am
+    deliver_to: [sheet, gmail_draft]
+
+  tax_season_prep:
+    enabled: true
+    schedule: "0 9 1 1,4,7,10 *"   # 1st of each quarter, 9:00am
+    deliver_to: [sheet]
+
+  track_brand_mentions:
+    enabled: true
+    schedule: "0 18 * * *"         # daily 6:00pm
+    deliver_to: [telegram]
+
+  weekly_revenue_summary:
+    enabled: true
+    schedule: "0 8 * * 1"          # Mondays 8:00am
+    deliver_to: [telegram]

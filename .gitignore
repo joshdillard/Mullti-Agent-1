@@ -1,0 +1,23 @@
+# Secrets & local config
+.env
+.env.local
+*.secret.json
+credentials/
+token*.json
+
+# Local state
+state/
+*.sqlite3
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# OS
+.DS_Store
