@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from apscheduler.triggers.cron import CronTrigger
@@ -37,6 +37,38 @@ def _next_run(schedule: str, tz: ZoneInfo) -> str | None:
         return nxt.isoformat(timespec="minutes") if nxt else None
     except (ValueError, TypeError):
         return None
+
+
+def upcoming_runs(settings: Settings, hours: int = 24) -> list[dict]:
+    """Every scheduled fire across all enabled agents over the next `hours`."""
+    tz = ZoneInfo(settings.timezone)
+    registry = load_all()
+    now = datetime.now(tz)
+    end = now + timedelta(hours=hours)
+    events: list[dict] = []
+
+    for name, cls in registry.items():
+        cfg = settings.agent_config(name)
+        schedule = cfg.get("schedule", "manual")
+        if not cfg.get("enabled") or schedule == "manual":
+            continue
+        try:
+            trigger = CronTrigger.from_crontab(schedule, timezone=tz)
+        except (ValueError, TypeError):
+            continue
+        fire = trigger.get_next_fire_time(None, now)
+        while fire and fire <= end:
+            events.append(
+                {
+                    "agent": name,
+                    "description": cls.description,
+                    "when": fire.isoformat(timespec="minutes"),
+                }
+            )
+            fire = trigger.get_next_fire_time(fire, fire)
+
+    events.sort(key=lambda e: e["when"])
+    return events
 
 
 def _humanize(schedule: str) -> str:
@@ -89,6 +121,7 @@ def build_state(settings: Settings) -> dict:
         "model": settings.model,
         "integrations": Integrations().status(),
         "agents": agents,
+        "timeline": upcoming_runs(settings, hours=24),
         "activity": history.all()[:40],
         "now": datetime.now(tz).isoformat(timespec="seconds"),
     }

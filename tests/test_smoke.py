@@ -110,3 +110,34 @@ def test_runner_records_history(tmp_path, monkeypatch):
     assert state["agents"]
     assert any(a["name"] == "weekly_revenue_summary" for a in state["agents"])
     assert "ayrshare" in state["integrations"]
+    assert "phyllo" in state["integrations"]
+    assert "timeline" in state
+
+
+def test_timeline_lists_upcoming_runs():
+    from multiagent.dashboard.app import upcoming_runs
+
+    settings = Settings.load()
+    events = upcoming_runs(settings, hours=24)
+    # At least the daily agents should fire in any 24h window.
+    assert events
+    assert all({"agent", "description", "when"} <= set(e) for e in events)
+    # Sorted ascending by time.
+    times = [e["when"] for e in events]
+    assert times == sorted(times)
+
+
+def test_phyllo_preferred_for_audience(monkeypatch):
+    monkeypatch.setenv("PHYLLO_CLIENT_ID", "id")
+    monkeypatch.setenv("PHYLLO_SECRET", "secret")
+    monkeypatch.setenv("PHYLLO_ACCOUNT_ID", "acct")
+    from multiagent.integrations.phyllo import Phyllo
+
+    # Force the live path to return mapped data; TikTok.audience should use it.
+    monkeypatch.setattr(
+        Phyllo, "audience", lambda self, account_id=None: {"followers": 99, "_source": "phyllo"}
+    )
+    from multiagent.integrations.tiktok import TikTok
+
+    aud = TikTok().audience()
+    assert aud.get("_source") == "phyllo"

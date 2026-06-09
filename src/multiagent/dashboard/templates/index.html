@@ -66,6 +66,17 @@
   .modal pre{white-space:pre-wrap;font:13px/1.6 ui-monospace,Menlo,Consolas,monospace;color:#d7dce4}
   .x{float:right;cursor:pointer;color:var(--muted);font-size:20px;line-height:1}
   .foot{color:var(--muted);font-size:11px;margin-top:16px;text-align:center}
+  .timeline{display:flex;gap:0;overflow-x:auto;padding:4px 0 12px;margin-bottom:8px}
+  .tl{flex:none;min-width:128px;border-left:1px solid var(--line);padding:0 12px;position:relative}
+  .tl:first-child{border-left:none;padding-left:2px}
+  .tl .tick{position:absolute;left:-4px;top:2px;width:7px;height:7px;border-radius:50%;
+    background:var(--accent)}
+  .tl .time{font-size:12px;font-weight:600;color:var(--text)}
+  .tl .day{font-size:10px;color:var(--muted);margin-bottom:5px}
+  .tl .job{font-size:11px;color:#c2c9d6;background:var(--panel2);border:1px solid var(--line);
+    border-radius:6px;padding:3px 7px;margin-top:4px;white-space:nowrap}
+  .tl.soon .time{color:var(--accent)}
+  .empty-tl{color:var(--muted);font-style:italic;font-size:12px;padding:6px 0}
 </style>
 </head>
 <body>
@@ -78,6 +89,9 @@
 </header>
 
 <div class="wrap">
+  <h2>Next 24 hours</h2>
+  <div class="timeline" id="timeline"></div>
+
   <div class="layout">
     <main>
       <h2>Agents</h2>
@@ -151,6 +165,18 @@ function render(){
       </div>
     </div>`;
   }).join("");
+
+  const tl = d.timeline || [];
+  const soon = Date.now() + 60*60*1000;  // highlight runs within the next hour
+  document.getElementById("timeline").innerHTML = tl.length ? tl.map(e=>{
+    const dt = new Date(e.when);
+    const t = dt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    const day = dt.toLocaleDateString([], {weekday:'short'});
+    const cls = dt.getTime() < soon ? 'tl soon' : 'tl';
+    return `<div class="${cls}"><span class="tick"></span>
+      <div class="time">${t}</div><div class="day">${day}</div>
+      <div class="job">${esc(e.description)}</div></div>`;
+  }).join("") : '<div class="empty-tl">No scheduled runs in the next 24h.</div>';
 
   document.getElementById("feed").innerHTML = d.activity.length ? d.activity.map(e=>`
     <div class="ev">

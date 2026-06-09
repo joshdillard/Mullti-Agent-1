@@ -12,6 +12,7 @@ from typing import Any
 
 from .ayrshare import Ayrshare
 from .base import Integration
+from .phyllo import Phyllo
 
 
 class TikTok(Integration):
@@ -20,11 +21,14 @@ class TikTok(Integration):
 
     def __init__(self) -> None:
         super().__init__()
-        # Ayrshare is the recommended provider — it covers TikTok analytics
-        # without the official app-review gauntlet. We're "live" if either the
-        # direct TikTok token OR an Ayrshare key is present.
+        # Ayrshare covers TikTok posting + analytics without the official
+        # app-review gauntlet; Phyllo adds deeper audience demographics.
+        # We're "live" if any of them (or the direct token) is present.
         self.ayrshare = Ayrshare()
-        self.configured = self.configured or self.ayrshare.configured
+        self.phyllo = Phyllo()
+        self.configured = (
+            self.configured or self.ayrshare.configured or self.phyllo.configured
+        )
 
     def trending(self, keywords: list[str] | None = None, limit: int = 10) -> list[dict[str, Any]]:
         """Return trending sounds/hashtags/formats relevant to the niche.
@@ -46,10 +50,17 @@ class TikTok(Integration):
         return _sample_posts(days)
 
     def audience(self) -> dict[str, Any]:
-        """Return follower demographics + top-performing content themes."""
+        """Return follower demographics + top-performing content themes.
+
+        Phyllo goes deepest on demographics, so prefer it; fall back to
+        Ayrshare's social analytics, then to demo data.
+        """
+        if self.phyllo.configured:
+            mapped = self.phyllo.audience()
+            if mapped:
+                return mapped
         if self.ayrshare.configured:
-            data = self.ayrshare.social_analytics(["tiktok"])
-            mapped = _from_ayrshare_analytics(data)
+            mapped = _from_ayrshare_analytics(self.ayrshare.social_analytics(["tiktok"]))
             if mapped:
                 return mapped
         self.demo("audience")

@@ -7,6 +7,7 @@ from .gdocs import Docs
 from .gmail import Gmail
 from .gsheets import Sheets
 from .linkedin import LinkedIn
+from .phyllo import Phyllo
 from .stripe_client import Stripe
 from .telegram import Telegram
 from .tiktok import TikTok
@@ -60,10 +61,15 @@ class Integrations:
     def ayrshare(self) -> Ayrshare:
         return self._get("ayrshare", Ayrshare)
 
+    @property
+    def phyllo(self) -> Phyllo:
+        return self._get("phyllo", Phyllo)
+
     def status(self) -> dict[str, bool]:
         """Which integrations are configured (live) vs demo."""
         return {
             "ayrshare": self.ayrshare.configured,
+            "phyllo": self.phyllo.configured,
             "tiktok": self.tiktok.configured,
             "linkedin": self.linkedin.configured,
             "gmail": self.gmail.configured,
@@ -78,6 +84,7 @@ class Integrations:
 __all__ = [
     "Integrations",
     "Ayrshare",
+    "Phyllo",
     "Docs",
     "Gmail",
     "Sheets",

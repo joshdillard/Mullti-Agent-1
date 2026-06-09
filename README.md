@@ -53,7 +53,7 @@ python run.py run research_topic_series --topic "AI b-roll workflows"
 # 4. Open the monitoring dashboard
 python run.py dashboard        # http://127.0.0.1:8765
 
-# 5. Add your keys
+# 5. Add your keys (step-by-step guide: docs/SETUP.md)
 cp .env.example .env          # then fill in ANTHROPIC_API_KEY at minimum
 ```
 
@@ -67,6 +67,8 @@ python run.py dashboard        # → http://127.0.0.1:8765
 
 A single-page board to check on everything daily:
 
+- **Next 24 hours** — a timeline strip of every scheduled run coming up, in
+  order, with the next hour highlighted.
 - **Agent grid** — every agent with its schedule, next run, last-run status
   (green/red/spinner), delivery targets, and a preview of its latest output.
 - **Run now** — trigger any agent on the spot (runs in the background); click
@@ -127,6 +129,7 @@ src/multiagent/
 │   └── state.py            # per-agent JSON memory (dedupe ideas, leads, etc.)
 ├── integrations/           # one adapter per service, each with demo fallback
 │   ├── ayrshare.py         # unified TikTok + LinkedIn provider
+│   ├── phyllo.py           # deep audience demographics
 │   ├── tiktok.py  linkedin.py  gmail.py  gsheets.py
 │   ├── gdocs.py   stripe_client.py  telegram.py  websearch.py
 ├── dashboard/              # Flask monitoring UI (app.py + templates/)
@@ -171,9 +174,12 @@ to your audience by accident. Trend discovery (`spot_viral_opportunities`) and
 brand/competitor research run on Claude's built-in web search, so they need no
 social key at all.
 
-> Want richer follower demographics for `research_audience` /
-> `weekly_performance_review`? Add Phyllo as a second provider — the adapter
-> seam is the same as Ayrshare's.
+**Phyllo is also wired in** for richer audience demographics. Set
+`PHYLLO_CLIENT_ID` / `PHYLLO_SECRET` / `PHYLLO_ACCOUNT_ID` and it takes priority
+over Ayrshare for `research_audience` and `weekly_performance_review` (it goes
+deeper on follower demographics). Everything else is unchanged.
+
+📋 **Step-by-step for every key is in [`docs/SETUP.md`](docs/SETUP.md).**
 
 ## Taking an integration live
 
