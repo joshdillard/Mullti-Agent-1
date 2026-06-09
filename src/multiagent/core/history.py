@@ -7,6 +7,7 @@ when it ran, whether it succeeded, what it produced, and where it went.
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -41,7 +42,10 @@ class History:
             }
         )
         self._records = self._records[-CAP:]
-        self.path.write_text(json.dumps(self._records, indent=2, default=str))
+        # Atomic write so the dashboard never reads a half-written history file.
+        tmp = self.path.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(self._records, indent=2, default=str))
+        os.replace(tmp, self.path)
 
     def all(self) -> list[dict[str, Any]]:
         return list(reversed(self._records))  # newest first

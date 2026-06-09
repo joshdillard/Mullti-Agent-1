@@ -8,6 +8,7 @@ leads have already been emailed. One file per agent under state/.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -39,4 +40,7 @@ class State:
         self._flush()
 
     def _flush(self) -> None:
-        self.path.write_text(json.dumps(self._data, indent=2, default=str))
+        # Atomic write: a concurrent reader/writer never sees a half-written file.
+        tmp = self.path.with_suffix(self.path.suffix + ".tmp")
+        tmp.write_text(json.dumps(self._data, indent=2, default=str))
+        os.replace(tmp, self.path)
